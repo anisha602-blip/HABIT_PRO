@@ -1,6 +1,6 @@
 import { calcLevel } from '../utils/gamification';
 
-export default function Dashboard({ user, habits, done, xp, streak, lc, sql, todayKey, onToggle, setPage, setLc, setSql, onSave }) {
+export default function Dashboard({ user, habits, done, xp, streak, lc, sql, todayKey, onToggle, setPage, setLc, setSql, onSave, onDeleteHabit }) {
   const level = calcLevel(xp);
   const todayDone = done[todayKey] || [];
   const completed = todayDone.length;
@@ -78,6 +78,20 @@ export default function Dashboard({ user, habits, done, xp, streak, lc, sql, tod
                     <div className="habit-meta">
                       <span className="badge badge-violet">{h.category}</span>
                       <span className="habit-xp-badge">+{h.xp} XP</span>
+                      <button
+                        title="Delete habit"
+                        style={{
+                          background: 'rgba(248,113,113,0.1)',
+                          border: '1px solid rgba(248,113,113,0.25)',
+                          color: 'var(--err)',
+                          borderRadius: 6,
+                          cursor: 'pointer',
+                          padding: '3px 7px',
+                          fontSize: '0.78rem',
+                          lineHeight: 1,
+                        }}
+                        onClick={(e) => { e.stopPropagation(); onDeleteHabit(h.id); }}
+                      >✕</button>
                     </div>
                   </div>
                 );

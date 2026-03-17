@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import './styles.css';
 
 import { onAuthChange, loadUserData, saveUserData, isConfigured } from './firebase';
-import { calcLevel, calcStreak, seedHistory } from './utils/gamification';
+import { calcLevel, calcStreak } from './utils/gamification';
 import { signOutUser } from './firebase';
 
 import Sidebar from './components/Sidebar';
@@ -18,14 +18,7 @@ import Analytics from './pages/Analytics';
 import Schedule from './pages/Schedule';
 import Profile from './pages/Profile';
 
-// ── Default habits for new users ──
-const DEFAULT_HABITS = [
-  { id: 'default-1', name: 'Morning LeetCode', category: 'Study', freq: 'Daily', xp: 30, icon: '💻' },
-  { id: 'default-2', name: 'SQL Practice', category: 'Study', freq: 'Daily', xp: 25, icon: '🗄️' },
-  { id: 'default-3', name: 'Morning Run', category: 'Health', freq: 'Daily', xp: 20, icon: '🏃' },
-  { id: 'default-4', name: 'Read 20 pages', category: 'Work', freq: 'Daily', xp: 15, icon: '📖' },
-  { id: 'default-5', name: 'Meditation', category: 'Health', freq: 'Daily', xp: 15, icon: '🧘' },
-];
+
 
 const ALL_NAV_ITEMS = [
   { id: 'dashboard', icon: '⊞', label: 'Dashboard' },
@@ -39,10 +32,8 @@ const ALL_NAV_ITEMS = [
 
 const MOBILE_NAV_ITEMS = [
   { id: 'dashboard', icon: '⊞', label: 'Home' },
-  { id: 'planner', icon: '✦', label: 'Planner' },
-  { id: 'daily', icon: '◈', label: 'Prep' },
   { id: 'habits', icon: '◎', label: 'Habits' },
-  { id: 'profile', icon: '◉', label: 'Me' },
+  { id: 'analytics', icon: '◫', label: 'Analytics' },
 ];
 
 let saveTimer = null;
@@ -141,6 +132,14 @@ function MobileHeader({ xp, streak, theme, setTheme, onMenuOpen }) {
         <span className="mobile-stat-pill">Lv.{level}</span>
         <button
           className="icon-btn"
+          style={{ flex: 'none', width: 30, height: 30, fontSize: '0.7rem', color: 'var(--err)' }}
+          title="Sign out"
+          onClick={signOutUser}
+        >
+          🚪
+        </button>
+        <button
+          className="icon-btn"
           style={{ flex: 'none', width: 30, height: 30, fontSize: '0.8rem' }}
           onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
         >
@@ -181,7 +180,7 @@ function App() {
   const [habits, setHabits] = useState([]);
   const [done, setDone] = useState({});
   const [history, setHistory] = useState({});
-  const [xp, setXp] = useState(840);
+  const [xp, setXp] = useState(0);
   const [streak, setStreak] = useState(0);
   const [lc, setLc] = useState(0);
   const [sql, setSql] = useState(0);
@@ -205,32 +204,30 @@ function App() {
         try {
           let data = await loadUserData(firebaseUser.uid);
           if (!data) {
-            const hist = seedHistory();
             data = {
-              habits: DEFAULT_HABITS,
+              habits: [],
               done: {},
-              history: hist,
-              xp: 840,
-              level: calcLevel(840),
-              streak: calcStreak(hist),
+              history: {},
+              xp: 0,
+              level: 1,
+              streak: 0,
               lc: 0,
               sql: 0,
             };
             await saveUserData(firebaseUser.uid, data);
           }
-          setHabits(data.habits || DEFAULT_HABITS);
+          setHabits(data.habits || []);
           setDone(data.done || {});
           setHistory(data.history || {});
-          setXp(data.xp || 840);
+          setXp(data.xp || 0);
           setStreak(data.streak || calcStreak(data.history || {}));
           setLc(data.lc || 0);
           setSql(data.sql || 0);
         } catch (e) {
           console.error('Failed to load user data:', e);
-          const hist = seedHistory();
-          setHabits(DEFAULT_HABITS);
-          setHistory(hist);
-          setStreak(calcStreak(hist));
+          setHabits([]);
+          setHistory({});
+          setStreak(0);
         }
         setDataReady(true);
       } else {
@@ -303,6 +300,14 @@ function App() {
     });
   }, [debouncedSave]);
 
+  const onDeleteHabit = useCallback((id) => {
+    setHabits(prev => {
+      const updated = prev.filter(h => h.id !== id);
+      debouncedSave({ habits: updated });
+      return updated;
+    });
+  }, [debouncedSave]);
+
   // ── Render ──
 
   if (authState === 'loading') {
@@ -346,7 +351,7 @@ function App() {
       case 'analytics': return <Analytics habits={habits} done={done} history={history} xp={xp} streak={streak} todayKey={todayKey} />;
       case 'schedule':  return <Schedule />;
       case 'profile':   return <Profile user={user} habits={habits} xp={xp} streak={streak} lc={lc} sql={sql} />;
-      default:          return <Dashboard {...pageProps} setLc={setLc} setSql={setSql} />;
+      default:          return <Dashboard {...pageProps} setLc={setLc} setSql={setSql} onDeleteHabit={onDeleteHabit} />;
     }
   };
 
