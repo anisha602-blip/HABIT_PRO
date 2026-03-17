@@ -27,6 +27,16 @@ const DEFAULT_HABITS = [
   { id: 'default-5', name: 'Meditation', category: 'Health', freq: 'Daily', xp: 15, icon: '🧘' },
 ];
 
+const ALL_NAV_ITEMS = [
+  { id: 'dashboard', icon: '⊞', label: 'Dashboard' },
+  { id: 'planner', icon: '✦', label: 'AI Planner' },
+  { id: 'daily', icon: '◈', label: 'Daily Prep' },
+  { id: 'habits', icon: '◎', label: 'Habit Tracker' },
+  { id: 'analytics', icon: '◫', label: 'Analytics' },
+  { id: 'schedule', icon: '▦', label: 'Schedule' },
+  { id: 'profile', icon: '◉', label: 'Profile' },
+];
+
 const MOBILE_NAV_ITEMS = [
   { id: 'dashboard', icon: '⊞', label: 'Home' },
   { id: 'planner', icon: '✦', label: 'Planner' },
@@ -59,13 +69,71 @@ function MobileNav({ page, setPage }) {
   );
 }
 
+// ── Mobile Drawer Sidebar ──
+function MobileDrawer({ open, onClose, page, setPage, user, xp, streak, theme, setTheme }) {
+  const level = calcLevel(xp);
+  const goTo = (id) => { setPage(id); onClose(); };
+
+  return (
+    <>
+      <div className={`mobile-drawer-overlay${open ? ' open' : ''}`} onClick={onClose} />
+      <div className={`mobile-drawer${open ? ' open' : ''}`}>
+        <div className="drawer-header">
+          <div className="drawer-logo">
+            <div className="logo-icon" style={{ width: 28, height: 28, fontSize: '0.85rem' }}>✦</div>
+            HabitPro
+          </div>
+          <button className="drawer-close" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="drawer-nav">
+          {ALL_NAV_ITEMS.map(item => (
+            <button
+              key={item.id}
+              className={`drawer-nav-item${page === item.id ? ' active' : ''}`}
+              onClick={() => goTo(item.id)}
+            >
+              <span className="drawer-nav-icon">{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="drawer-footer">
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+            <span className="mobile-stat-pill">🔥 {streak} streak</span>
+            <span className="mobile-stat-pill">Lv.{level}</span>
+            <span className="mobile-stat-pill">{xp} XP</span>
+          </div>
+          {user && (
+            <div className="drawer-user-row">
+              <div className="user-avatar" style={{ width: 30, height: 30, fontSize: '0.75rem' }}>
+                {user.photoURL ? <img src={user.photoURL} alt="" /> : (user.displayName?.[0] || '?')}
+              </div>
+              <span className="drawer-user-name">{user.displayName || user.email}</span>
+            </div>
+          )}
+          <div className="drawer-actions">
+            <button className="icon-btn" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}>
+              {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+            </button>
+            <button className="icon-btn" onClick={() => { signOutUser(); onClose(); }}>
+              🚪 Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ── Mobile Header ──
-function MobileHeader({ xp, streak, theme, setTheme }) {
+function MobileHeader({ xp, streak, theme, setTheme, onMenuOpen }) {
   const level = calcLevel(xp);
   return (
     <div className="mobile-header">
       <div className="mobile-header-left">
-        <div className="logo-icon" style={{ width: 28, height: 28, fontSize: '0.85rem' }}>✦</div>
+        <button className="hamburger-btn" onClick={onMenuOpen}>☰</button>
         <span className="mobile-header-title">HabitPro</span>
       </div>
       <div className="mobile-header-right">
@@ -104,6 +172,7 @@ function App() {
   const [authState, setAuthState] = useState('loading');
   const [user, setUser] = useState(null);
   const [dataReady, setDataReady] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [page, setPage] = useState('landing');
   const [theme, setTheme] = useState(() => localStorage.getItem('hp-theme') || 'dark');
   const [toast, setToast] = useState('');
@@ -284,7 +353,8 @@ function App() {
   return (
     <div className="app-shell">
       <Sidebar page={page} setPage={setPage} user={user} xp={xp} streak={streak} history={history} theme={theme} setTheme={setTheme} />
-      <MobileHeader xp={xp} streak={streak} theme={theme} setTheme={setTheme} />
+      <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} page={page} setPage={setPage} user={user} xp={xp} streak={streak} theme={theme} setTheme={setTheme} />
+      <MobileHeader xp={xp} streak={streak} theme={theme} setTheme={setTheme} onMenuOpen={() => setDrawerOpen(true)} />
       <main className="main-content">{renderPage()}</main>
       <MobileNav page={page} setPage={setPage} />
       {toast && <Toast msg={toast} onDone={() => setToast('')} />}
