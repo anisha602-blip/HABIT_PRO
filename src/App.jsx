@@ -3,6 +3,7 @@ import './styles.css';
 
 import { onAuthChange, loadUserData, saveUserData, isConfigured } from './firebase';
 import { calcLevel, calcStreak, seedHistory } from './utils/gamification';
+import { signOutUser } from './firebase';
 
 import Sidebar from './components/Sidebar';
 import Toast from './components/Toast';
@@ -26,9 +27,61 @@ const DEFAULT_HABITS = [
   { id: 'default-5', name: 'Meditation', category: 'Health', freq: 'Daily', xp: 15, icon: '🧘' },
 ];
 
+const MOBILE_NAV_ITEMS = [
+  { id: 'dashboard', icon: '⊞', label: 'Home' },
+  { id: 'planner', icon: '✦', label: 'Planner' },
+  { id: 'daily', icon: '◈', label: 'Prep' },
+  { id: 'habits', icon: '◎', label: 'Habits' },
+  { id: 'profile', icon: '◉', label: 'Me' },
+];
+
 let saveTimer = null;
 const pad = (n) => String(n).padStart(2, '0');
 const fmtDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+// ── Mobile Bottom Nav ──
+function MobileNav({ page, setPage }) {
+  return (
+    <nav className="mobile-nav">
+      <div className="mobile-nav-inner">
+        {MOBILE_NAV_ITEMS.map(item => (
+          <button
+            key={item.id}
+            className={`mobile-nav-item${page === item.id ? ' active' : ''}`}
+            onClick={() => setPage(item.id)}
+          >
+            <span className="mnav-icon">{item.icon}</span>
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+// ── Mobile Header ──
+function MobileHeader({ xp, streak, theme, setTheme }) {
+  const level = calcLevel(xp);
+  return (
+    <div className="mobile-header">
+      <div className="mobile-header-left">
+        <div className="logo-icon" style={{ width: 28, height: 28, fontSize: '0.85rem' }}>✦</div>
+        <span className="mobile-header-title">HabitPro</span>
+      </div>
+      <div className="mobile-header-right">
+        <span className="mobile-stat-pill">🔥 {streak}</span>
+        <span className="mobile-stat-pill">Lv.{level}</span>
+        <button
+          className="icon-btn"
+          style={{ flex: 'none', width: 30, height: 30, fontSize: '0.8rem' }}
+          onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+        >
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ── Setup Banner shown when .env is not configured ──
 function SetupBanner() {
@@ -41,8 +94,7 @@ function SetupBanner() {
     }}>
       <span>⚠️</span>
       <span>
-        <strong>Firebase not configured.</strong> Create a <code style={{ background: 'rgba(251,191,36,0.15)', padding: '1px 6px', borderRadius: 4 }}>.env</code> file in <code style={{ background: 'rgba(251,191,36,0.15)', padding: '1px 6px', borderRadius: 4 }}>e:\habit_Pro</code> with your Firebase keys to enable Google Sign-In and cloud sync.
-        The landing page and UI are fully visible below.
+        <strong>Firebase not configured.</strong> Create a <code style={{ background: 'rgba(251,191,36,0.15)', padding: '1px 6px', borderRadius: 4 }}>.env</code> file with your Firebase keys to enable Google Sign-In and cloud sync.
       </span>
     </div>
   );
@@ -106,7 +158,6 @@ function App() {
           setSql(data.sql || 0);
         } catch (e) {
           console.error('Failed to load user data:', e);
-          // Use defaults on error
           const hist = seedHistory();
           setHabits(DEFAULT_HABITS);
           setHistory(hist);
@@ -233,7 +284,9 @@ function App() {
   return (
     <div className="app-shell">
       <Sidebar page={page} setPage={setPage} user={user} xp={xp} streak={streak} history={history} theme={theme} setTheme={setTheme} />
+      <MobileHeader xp={xp} streak={streak} theme={theme} setTheme={setTheme} />
       <main className="main-content">{renderPage()}</main>
+      <MobileNav page={page} setPage={setPage} />
       {toast && <Toast msg={toast} onDone={() => setToast('')} />}
     </div>
   );
